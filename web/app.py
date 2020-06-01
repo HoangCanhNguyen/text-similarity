@@ -51,17 +51,19 @@ def verify_pw(username, password):
     if not userExist(username):
         return False
     else:
-      hased_pw = users.find({
-        "Username": username
-      })[0]["Password"]
+        hased_pw = users.find({
+            "Username": username
+        })[0]["Password"]
 
     if bcrypt.hashpw(password.encode('utf-8'), hased_pw) == hased_pw:
-      return True
-    else: 
-      return False
+        return True
+    else:
+        return False
+
+
 def countTokens(username):
     tokens = users.find({
-      "Username":username
+        "Username": username
     })[0]["Tokens"]
     return tokens
 
@@ -69,7 +71,7 @@ def countTokens(username):
 class Detect(Resource):
     def post(self):
         postedData = request.get_json()
-        
+
         username = postedData["username"]
         password = postedData["password"]
         text1 = postedData["text1"]
@@ -99,17 +101,18 @@ class Detect(Resource):
             }
             return jsonify(retJson)
 
-        nlp = spacy.load('spacy')
+        nlp = spacy.load("en_core_web_sm-2.2.5")
 
         text1 = nlp(text1)
         text2 = nlp(text2)
 
-        ratio = text1.smimilarity(text2)
-        retjson = {
+        ratio = text1.similarity(text2)
+        retJson = {
             "status": 200,
             "similarity": ratio,
             "msg": "Success to calculate the similarity"
         }
+        return jsonify(retJson)
 
         current_tokens = countTokens(username)
 
@@ -121,48 +124,47 @@ class Detect(Resource):
             }
         })
 
+class Refill(Resource):
+    def post(self):
+        postedData = request.get_json()
+
+        username = postedData["username"]
+        password = postedData["admin_pw"]
+        refill = postedData["refill"]
+        if not userExist(username):
+            retJson = {
+                "status": 301,
+                "msg": "Invalid username"
+            }
+            return jsonify(retJson)
+
+        correct_pw = "abc123"
+        if not password == correct_pw:
+            retJson = {
+                "status": 304,
+                "msg": "Invalid admin pass"
+            }
+            return jsonify(retJson)
+
+        current_tokens = countTokens(username)
+        users.update({
+            "Username": username
+        }, {
+            "$set": {
+                "Tokens": refill
+            }
+        })
+
+        retJson = {
+            "status": "200",
+            "msg": "Success to refill"
+        }
         return jsonify(retJson)
 
-class Refill(Resource):
-  def post(self):
-    postedData = request.get_json()
-
-    username = postedData["username"]
-    password = postedData["admin_pw"]
-    refill = postedData["refill"]
-    if not userExist(username):
-      retJson = {
-        "status": 301,
-        "msg":"Invalid username"
-      }
-      return jsonify(retJson)
-
-    correct_pw = "abc123"
-    if not password == correct_pw:
-      retJson = {
-        "status":304,
-        "msg": "Invalid admin pass"
-      }
-      return jsonify(retJson)
-
-    current_tokens = countTokens(username)
-    users.update({
-      "Username":username
-    }, {
-      "$set": {
-        "Tokens": refill
-      }
-    })
-
-    retJson = {
-      "status":"200",
-      "msg":"Success to refill"
-    }
-    return jsonify(retJson)
 
 api.add_resource(Register, '/register')
 api.add_resource(Detect, '/detect')
 api.add_resource(Refill, '/refill')
 
 if __name__ == "__main__":
-  app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0')
